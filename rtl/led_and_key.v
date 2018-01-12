@@ -1,4 +1,4 @@
-module ledAndKey(
+module led_and_key(
     input clk,
     input rst,
 
@@ -40,6 +40,7 @@ module ledAndKey(
     //   tm_rw      selects input or output
     reg tm_rw;
     wire dio_in, dio_out;
+    /* verilator lint_off PINMISSING */
     SB_IO #(
         .PIN_TYPE(6'b101001),
         .PULLUP(1'b1)
@@ -49,6 +50,7 @@ module ledAndKey(
         .D_IN_0(dio_in),
         .D_OUT_0(dio_out)
     );
+    /* verilator lint_on PINMISSING */
 
     // setup tm1638 module with it's tristate IO
     //   tm_in      is read from module
@@ -64,7 +66,9 @@ module ledAndKey(
     //   tm_data    the tristate io pin to module
     reg tm_latch;
     wire busy;
+    /* verilator lint_off UNUSED */
     wire [7:0] tm_data, tm_in;
+    /* verilator lint_on UNUSED */
     reg [7:0] tm_out;
 
     assign tm_in = tm_data;

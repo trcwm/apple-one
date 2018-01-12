@@ -1,13 +1,5 @@
 `include "chip_6502_nodes.inc"
 
-module LOGIC (
-    input  [`NUM_NODES-1:0] i,
-    output [`NUM_NODES-1:0] o);
-
-    `include "logic.inc"
-endmodule
-
-
 module chip_6502 (
     input           clk,    // FPGA clock
     input           phi,    // 6502 clock
@@ -27,7 +19,7 @@ module chip_6502 (
     reg  [`NUM_NODES-1:0] ni;
     reg  [`NUM_NODES-1:0] q = 0;
 
-    LOGIC logic_00 (.i(ni), .o(no));
+    chip_6502_logic logic_00 (.i(ni), .o(no));
 
     always @ (posedge clk)
         q <= no;
@@ -64,3 +56,4 @@ module chip_6502 (
     assign sync = no[`NODE_sync];
 
 endmodule
+

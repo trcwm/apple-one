@@ -76,8 +76,8 @@ assign is_transmitting = tx_state != TX_IDLE;
 
 always @(posedge clk) begin
 	if (rst) begin
-		recv_state = RX_IDLE;
-		tx_state = TX_IDLE;
+		recv_state <= RX_IDLE;
+		tx_state <= TX_IDLE;
 	end
 
 	// The clk_divider counter counts down from
@@ -85,15 +85,15 @@ always @(posedge clk) begin
 	// reaches 0, 1/16 of the bit period has elapsed.
     // Countdown timers for the receiving and transmitting
 	// state machines are decremented.
-	rx_clk_divider = rx_clk_divider - 1;
-	if (!rx_clk_divider) begin
-		rx_clk_divider = CLOCK_DIVIDE;
-		rx_countdown = rx_countdown - 1;
+	rx_clk_divider <= rx_clk_divider - 1;
+	if (rx_clk_divider == 'd0) begin
+		rx_clk_divider <= CLOCK_DIVIDE;
+		rx_countdown <= rx_countdown - 1;
 	end
-	tx_clk_divider = tx_clk_divider - 1;
-	if (!tx_clk_divider) begin
-		tx_clk_divider = CLOCK_DIVIDE;
-		tx_countdown = tx_countdown - 1;
+	tx_clk_divider <= tx_clk_divider - 1;
+	if (tx_clk_divider == 'd0) begin
+		tx_clk_divider <= CLOCK_DIVIDE;
+		tx_countdown <= tx_countdown - 1;
 	end
 
 	// Receive state machine
@@ -104,51 +104,51 @@ always @(posedge clk) begin
 			if (!rx) begin
 				// Wait half the period - should resume in the
 				// middle of this first pulse.
-				rx_clk_divider = CLOCK_DIVIDE;
-				rx_countdown = 2;
-				recv_state = RX_CHECK_START;
+				rx_clk_divider <= CLOCK_DIVIDE;
+				rx_countdown <= 2;
+				recv_state <= RX_CHECK_START;
 			end
 		end
 		RX_CHECK_START: begin
-			if (!rx_countdown) begin
+			if (rx_countdown == 'd0) begin
 				// Check the pulse is still there
 				if (!rx) begin
 					// Pulse still there - good
 					// Wait the bit period to resume half-way
 					// through the first bit.
-					rx_countdown = 4;
-					rx_bits_remaining = 8;
-					recv_state = RX_READ_BITS;
+					rx_countdown <= 4;
+					rx_bits_remaining <= 8;
+					recv_state <= RX_READ_BITS;
 				end else begin
 					// Pulse lasted less than half the period -
 					// not a valid transmission.
-					recv_state = RX_ERROR;
+					recv_state <= RX_ERROR;
 				end
 			end
 		end
 		RX_READ_BITS: begin
-			if (!rx_countdown) begin
+			if (rx_countdown != 'd0) begin
 				// Should be half-way through a bit pulse here.
 				// Read this bit in, wait for the next if we
 				// have more to get.
-				rx_data = {rx, rx_data[7:1]};
-				rx_countdown = 4;
-				rx_bits_remaining = rx_bits_remaining - 1;
-				recv_state = rx_bits_remaining ? RX_READ_BITS : RX_CHECK_STOP;
+				rx_data <= {rx, rx_data[7:1]};
+				rx_countdown <= 4;
+				rx_bits_remaining <= rx_bits_remaining - 1;
+				recv_state <= rx_bits_remaining != 'd0 ? RX_READ_BITS : RX_CHECK_STOP;
 			end
 		end
 		RX_CHECK_STOP: begin
-			if (!rx_countdown) begin
+			if (rx_countdown != 'd0) begin
 				// Should resume half-way through the stop bit
 				// This should be high - if not, reject the
 				// transmission and signal an error.
-				recv_state = rx ? RX_RECEIVED : RX_ERROR;
+				recv_state <= rx ? RX_RECEIVED : RX_ERROR;
 			end
 		end
 		RX_DELAY_RESTART: begin
 			// Waits a set number of cycles before accepting
 			// another transmission.
-			recv_state = rx_countdown ? RX_DELAY_RESTART : RX_IDLE;
+			recv_state <= rx_countdown != 0 ? RX_DELAY_RESTART : RX_IDLE;
 		end
 		RX_ERROR: begin
 			// There was an error receiving.
@@ -156,14 +156,14 @@ always @(posedge clk) begin
 			// cycle while in this state and then waits
 			// 2 bit periods before accepting another
 			// transmission.
-			rx_countdown = 8;
-			recv_state = RX_DELAY_RESTART;
+			rx_countdown <= 8;
+			recv_state <= RX_DELAY_RESTART;
 		end
 		RX_RECEIVED: begin
 			// Successfully received a byte.
 			// Raises the received flag for one clock
 			// cycle while in this state.
-			recv_state = RX_IDLE;
+			recv_state <= RX_IDLE;
 		end
 	endcase
 
@@ -174,29 +174,29 @@ always @(posedge clk) begin
 				// If the transmit flag is raised in the idle
 				// state, start transmitting the current content
 				// of the tx_byte input.
-				tx_data = tx_byte;
+				tx_data <= tx_byte;
 				// Send the initial, low pulse of 1 bit period
 				// to signal the start, followed by the data
-				tx_clk_divider = CLOCK_DIVIDE;
-				tx_countdown = 4;
-				tx_out = 0;
-				tx_bits_remaining = 8;
-				tx_state = TX_SENDING;
+				tx_clk_divider <= CLOCK_DIVIDE;
+				tx_countdown <= 4;
+				tx_out <= 0;
+				tx_bits_remaining <= 8;
+				tx_state <= TX_SENDING;
 			end
 		end
 		TX_SENDING: begin
-			if (!tx_countdown) begin
-				if (tx_bits_remaining) begin
-					tx_bits_remaining = tx_bits_remaining - 1;
-					tx_out = tx_data[0];
-					tx_data = {1'b0, tx_data[7:1]};
-					tx_countdown = 4;
-					tx_state = TX_SENDING;
+			if (tx_countdown != 'd0) begin
+				if (tx_bits_remaining != 'd0) begin
+					tx_bits_remaining <= tx_bits_remaining - 1;
+					tx_out <= tx_data[0];
+					tx_data <= {1'b0, tx_data[7:1]};
+					tx_countdown <= 4;
+					tx_state <= TX_SENDING;
 				end else begin
 					// Set delay to send out 2 stop bits.
-					tx_out = 1;
-					tx_countdown = 8;
-					tx_state = TX_DELAY_RESTART;
+					tx_out <= 1;
+					tx_countdown <= 8;
+					tx_state <= TX_DELAY_RESTART;
 				end
 			end
 		end
@@ -204,7 +204,7 @@ always @(posedge clk) begin
 			// Wait until tx_countdown reaches the end before
 			// we send another transmission. This covers the
 			// "stop bit" delay.
-			tx_state = tx_countdown ? TX_DELAY_RESTART : TX_IDLE;
+			tx_state <= tx_countdown != 'd0 ? TX_DELAY_RESTART : TX_IDLE;
 		end
 	endcase
 end

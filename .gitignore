@@ -2,3 +2,7 @@
 *.xcf
 *.log
 synlog.tcl
+*.d
+*.o
+*.vcd
+obj_dir

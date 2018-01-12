@@ -1,7 +1,8 @@
 `define LED_KEYS
 
-module top(
+module apple (
     input  clk,
+    input  reset,
 
     input  uart_rx,
     output uart_tx,
@@ -38,7 +39,7 @@ module top(
     reg [7:0] start;
     always @(posedge clk)
 	if (~start[7]) start <= start + 1;
-    assign res = start[7];
+    assign res = start[7] && ~reset;
 
     //////////////////////////////////////////////////////////////////////////
     // 6502 phi0 clock
@@ -51,11 +52,12 @@ module top(
     SB_GB bg_phi (
         .USER_SIGNAL_TO_GLOBAL_BUFFER(div[3]),
         .GLOBAL_BUFFER_OUTPUT(clk_phi)
-    );
+    ); /* verilator lint_off DECLFILENAME */
 
     //////////////////////////////////////////////////////////////////////////
     // 6502
 
+    /* verilator lint_off PINMISSING */
     chip_6502 chip_6502 (
         .clk    (clk),
         .phi    (clk_phi),
@@ -67,16 +69,18 @@ module top(
         .rw     (rw),
         .dbi    (dbi),
         .dbo    (dbo),
-        .sync   (),
         .ab     (ab)
     );
+    /* verilator lint_on PINMISSING */
 
     //////////////////////////////////////////////////////////////////////////
     // USB UART
     
+    /* verilator lint_off UNUSED */
     wire received, is_receiving, rx_error, is_transmitting, transmit;
     reg  [6:0] tx_byte;
     wire [7:0] rx_byte;
+    /* verilator lint_on UNUSED */
 
     uart #(.CLOCK_DIVIDE( 625 )) my_uart (
         clk,              // master clock for this component
@@ -132,7 +136,7 @@ module top(
     reg  [7:0] leds;
     wire [7:0] keys;
 
-    ledAndKey my_led_and_keys (
+    led_and_key my_led_and_keys (
         .clk        (clk_phi),
         .rst        (~res),
         .display    (display),
@@ -165,13 +169,13 @@ module top(
     // RAM and ROM
 
     reg [7:0] ram[0:8191] /* synthesis syn_ramstyle = "block_ram" */;
-    reg [7:0] basic[0:4091] /* synthesis syn_ramstyle = "block_ram" */;
+    reg [7:0] basic[0:4095] /* synthesis syn_ramstyle = "block_ram" */;
     reg [7:0] rom[0:255] /* synthesis syn_ramstyle = "block_ram" */;
     
     initial begin
-        $readmemh("../ram.hex", ram, 0, 8191);
-        $readmemh("../rom.hex", rom, 0, 255);
-        $readmemh("../basic.hex", basic, 0, 4091);
+        $readmemh("./ram.hex", ram, 0, 8191);
+        $readmemh("./rom.hex", rom, 0, 255);
+        $readmemh("./basic.hex", basic, 0, 4095);
     end
 
     //always @(posedge clk_phi)

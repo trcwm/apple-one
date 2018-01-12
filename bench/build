@@ -1,0 +1,1 @@
+g++ -I../rtl/obj_dir/ -I/usr/local/share/verilator/include -I. apple.cpp /usr/local/share/verilator/include/verilated.cpp -o apple
